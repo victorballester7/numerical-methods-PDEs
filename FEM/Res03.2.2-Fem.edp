@@ -1,0 +1,55 @@
+// The variational formulation of the problem is:
+// Find v in H^1(Omega) with v = 0 in Gamma_4 such that
+// int_Omega (theta_t * v + grad(theta) * grad(v)) = int_{Gamma_1 U Gamma_2 U Gamma_3} alpha * theta * v
+
+// Now we use the method of lines:
+// We write theta(t, x) = sum_{i=1}^N theta_i(t) * phi_i(x) where phi_i(x) are the basis functions of the finite element space
+// We obtain the following system of ODEs:
+// sum_{i=1}^N theta_i'(t) * M_ij + sum_{i=1}^N theta_i(t) * K_ij + sum_{i=1}^N theta_i(t) * alpha * R_ij = 0
+// where M_ij = int_Omega phi_i * phi_j 
+//       K_ij = int_Omega grad(phi_i) * grad(phi_j)
+//       R_ij = int_{Gamma_1 U Gamma_2 U Gamma_3} alpha * phi_i * phi_j
+// This gives as the following system expressed in matrix form:
+// M * theta' + (K + alpha * R) * theta = 0
+// We will use the Implicit Euler method to solve this system:
+// (M + h * (K + alpha * R)) * theta^{n+1} = M * theta^n
+// theta^0 = 0
+// where h = t^{n+1} - t^n = Delta t
+
+// mesh 
+int numberofnodesX = 40; // number of nodes in each direction
+int numberofnodesY = 20;
+real L = 1.; // length in x direction
+real H = 0.25; // length in y direction 
+mesh Th = square(numberofnodesX, numberofnodesY, [L * x, - H + 2 * H * y]);
+
+real dt = 0.01; // time step
+real T = 0.5; // final time
+real alpha = 10.; // coefficient in the boundary condition
+real Tc = 319.; // temperature of the processor
+real Ta = 293.; // ambient temperature
+real thetac = (Tc - Ta) / Ta;
+
+// finite element space
+fespace Vh(Th, P1);
+
+// approximate and test functions
+Vh uh, vh, uhold; // uh is the approximate function and vh is the test function
+
+
+// variational formulation
+problem heat(uh, vh, solver=Cholesky) = int2d(Th)(uh * vh / dt + dx(uh) * dx(vh) + dy(uh) * dy(vh)) + int1d(Th, 1, 2, 3)(alpha * uh * vh) - int2d(Th)(uhold * vh / dt) + on(4, uh = thetac);
+
+uhold = 0.; // initial condition
+
+string legend = "t = 0";
+plot(uhold, wait=true, value=true, fill=true, cmm=legend);
+
+int numberofiterations = T / dt;
+
+for (int i = 1; i < numberofiterations; i++){
+  heat;
+  uhold = uh;
+  legend = "t = " + i * dt;
+  plot(uh, wait=true, value=true, fill=true, cmm=legend);
+}

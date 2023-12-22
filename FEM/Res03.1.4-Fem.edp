@@ -1,0 +1,49 @@
+// mesh 
+int numberofnodes = 10; // number of nodes in each direction
+mesh Th = square(numberofnodes, numberofnodes, [x, y]); // the origin of the rectangle is (0,0) and the length of the rectangle is 1 in each direction (otherwise we would use for eaxample [2*x, 3*y])
+
+// finite element space
+fespace Vh(Th, P2); // P1 is the type of finite element (here P1 = linear finite element - Lagrange)
+
+// source term and exact solution
+func f = 2. * x * (1. - x) + 2. * y * (1. - y); // f is a function of x and y to be the one that corresponds to the solution u:
+func u = x * (1. - x) * y * (1. - y); // u is the exact solution of the problem
+
+// approximate and test functions
+Vh uh, vh, error; // uh is the approximate function and vh is the test function
+
+// variational formulation
+problem poisson(uh, vh, solver=Cholesky) = int2d(Th)(dx(uh) * dx(vh) + dy(uh) * dy(vh)) - int2d(Th)(f * vh) + on(1, 2, 3, 4, uh = 0.); // on(1,2,3,4, uh=0.) means that the value of uh is 0 on the boundary of the domain (1, 2, 3, 4 are the numbers of the boundary edges)
+
+// solve the problem
+poisson;
+
+
+// compute the error
+error = u - uh; // error between the exact solution and the approximate solution
+// compute the L2 and H_0^1 norm of the error
+real L2norm = sqrt(int2d(Th)(error ^ 2));
+real H01norm = sqrt(int2d(Th)(dx(error) ^ 2 + dy(error) ^ 2));
+
+// plot
+string legend ="Number of nodes = " + numberofnodes + "\nL2 error = " + L2norm + "\nH01 error = " + H01norm;
+plot(uh, wait=true,cmm=legend);
+
+{
+  ofstream out("convergenceP1.dat");
+
+  out << 1./numberofnodes << " " << L2norm << " " << H01norm << endl;
+
+  int numberofiterations = 14;
+  for (int i = 1; i < numberofiterations; i++){
+    numberofnodes += 10;
+    Th = square(numberofnodes, numberofnodes, [x, y]);
+    poisson;
+    error = u - uh;
+    L2norm = sqrt(int2d(Th)(error ^ 2));
+    H01norm = sqrt(int2d(Th)(dx(error) ^ 2 + dy(error) ^ 2));
+    legend ="Number of nodes = " + numberofnodes + "\nL2 error = " + L2norm + "\nH01 error = " + H01norm;
+    plot(uh, wait=true,cmm=legend);
+    out << 1./numberofnodes << " " << L2norm << " " << H01norm << endl;
+  }
+}

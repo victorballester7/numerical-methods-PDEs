@@ -1,0 +1,22 @@
+// mesh 
+int numberofnodes = 100; // number of nodes in each direction
+mesh Th = square(numberofnodes, numberofnodes, [x, y]); // the origin of the rectangle is (0,0) and the length of the rectangle is 1 in each direction (otherwise we would use for eaxample [2*x, 3*y])
+// plot(Th); // plot the mesh
+
+// finite element space
+fespace Vh(Th, P1); // P1 is the type of finite element (here P1 = linear finite element - Lagrange)
+
+// source term
+func f = 1.; // f is a constant function equal to 1
+
+// approximate and test functions
+Vh uh, vh; // uh is the approximate function and vh is the test function
+
+// variational formulation
+problem poisson(uh, vh, solver=Cholesky) = int2d(Th)(dx(uh) * dx(vh) + dy(uh) * dy(vh)) - int2d(Th)(f * vh) + on(1, 2, 3, 4, uh = 0.); // on(1,2,3,4, uh=0.) means that the value of uh is 0 on the boundary of the domain (1, 2, 3, 4 are the numbers of the boundary edges)
+
+// solve the problem
+poisson;
+
+// plot the solution
+plot(uh, value=true);
